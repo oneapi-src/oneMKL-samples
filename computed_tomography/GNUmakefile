@@ -7,7 +7,7 @@ all: run
 run: computed_tomography
 	./computed_tomography
 
-MKL_COPTS = -qmkl -qmkl-sycl-impl=dft
+MKL_COPTS = -qmkl-ilp64 -qmkl-sycl-impl=dft
 
 DPCPP_OPTS = $(MKL_COPTS) -fsycl-device-code-split=per_kernel
 

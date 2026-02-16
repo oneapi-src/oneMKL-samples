@@ -9,12 +9,12 @@
 !      FORTRAN OpenMP offload examples for solving batched linear systems.
 !
 ! Compile for CPU:
-!     ifx -i8 -qmkl -free \
+!     ifx -i8 -qmkl-ilp64 -free \
 !         lu_solve_omp_offload_ex1_timer.F90 -o lu_solve_ex1_timer
 !
 ! Compile for GPU:
 !     ifx -i8 -DMKL_ILP64 -qopenmp -fopenmp-targets=spir64 -free \
-!         -qmkl -qmkl-sycl-impl=lapack \
+!         -qmkl-ilp64 -qmkl-sycl-impl=lapack \
 !         lu_solve_omp_offload_ex1_timer.F90 -o lu_solve_ex1_omp_timer
 !
 ! Compile with -DSP to use single precision instead of double precision.

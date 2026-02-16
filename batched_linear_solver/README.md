@@ -55,9 +55,9 @@ To find more information about the variable follow the link:
 If everything is working correctly, the output should be similar to this:
 ```
 u172874@s001-n157:~/oneMKL-samples/Libraries/oneMKL/batched_linear_solver$ make
-ifx lu_solve_omp_offload.F90 -o lu_solve -i8 -free -qmkl
-ifx lu_solve_omp_offload.F90 -o lu_solve_omp_offload -i8 -free -qmkl -DMKL_ILP64 -qopenmp -fopenmp-targets=spir64 -qmkl-sycl-impl=lapack
-ifx lu_solve_omp_offload_optimized.F90 -o lu_solve_omp_offload_optimized -i8 -free -qmkl -DMKL_ILP64 -qopenmp -fopenmp-targets=spir64 -qmkl-sycl-impl=lapack
+ifx lu_solve_omp_offload.F90 -o lu_solve -i8 -free -qmkl-ilp64
+ifx lu_solve_omp_offload.F90 -o lu_solve_omp_offload -i8 -free -qmkl-ilp64 -DMKL_ILP64 -qopenmp -fopenmp-targets=spir64 -qmkl-sycl-impl=lapack
+ifx lu_solve_omp_offload_optimized.F90 -o lu_solve_omp_offload_optimized -i8 -free -qmkl-ilp64 -DMKL_ILP64 -qopenmp -fopenmp-targets=spir64 -qmkl-sycl-impl=lapack
 ./lu_solve -n 64 -b 8 -r 1 -c 2
  Matrix dimensions:                    64
  Batch size:                     8

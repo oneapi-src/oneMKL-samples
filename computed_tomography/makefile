@@ -7,7 +7,7 @@ all: run
 run: computed_tomography.exe
 	.\computed_tomography.exe
 
-DPCPP_OPTS=/I"$(MKLROOT)\include" /Qmkl /Qmkl-sycl-impl=dft /EHsc -fsycl-device-code-split=per_kernel OpenCL.lib
+DPCPP_OPTS=/I"$(MKLROOT)\include" /Qmkl-ilp64 /Qmkl-sycl-impl=dft /EHsc -fsycl-device-code-split=per_kernel OpenCL.lib
 
 computed_tomography.exe: computed_tomography.cpp
 	icx-cl -fsycl $? /Fe$@ $(DPCPP_OPTS)
