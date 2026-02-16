@@ -50,8 +50,6 @@ You can remove all generated files with `make clean`.
 ### On a Windows* System
 Run `nmake` to build and run the sample. `nmake clean` removes temporary files.
 
-> **Warning**: On Windows, static linking with oneMKL currently takes a very long time due to a known compiler issue. This will be addressed in an upcoming release.
-
 ## Running the Computed Tomography Reconstruction Sample
 
 This sample performs its computations on the default SYCL* device. You can set

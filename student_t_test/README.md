@@ -53,8 +53,6 @@ t_test_usm.exe) are generated, which illustrate different APIs for random number
 
 You can remove all generated files with `nmake clean`.
 
-> **Warning**: On Windows, static linking with oneMKL currently takes a very long time, due to a known compiler issue. This will be addressed in an upcoming release.
-
 ## Running the Student's T-test Sample
 
 This sample performs its computations on the default SYCL* device. You can set

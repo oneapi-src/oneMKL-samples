@@ -65,8 +65,6 @@ You can remove all generated files with `make clean`.
 ### On a Windows* System
 Run `nmake` to build and run the sample programs. `nmake clean` removes temporary files.
 
-> **Warning**: On Windows, static linking with oneMKL currently takes a very long time, due to a known compiler issue. This will be addressed in an upcoming release.
-
 #### Build a sample using others generators
 To use the MRG32k3a generator or the Philox4x32x10 generator use `generator=mrg`
 or `generator=philox` correspondingly when building the sample, e.g.
