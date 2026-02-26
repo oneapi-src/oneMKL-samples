@@ -1,0 +1,14 @@
+american_options/ @oneapi-src/onemkl-rng-write
+batched_linear_solver/ @oneapi-src/onemkl-lapack-write
+binomial/ @oneapi-src/onemkl-rng-write
+black_scholes/ @oneapi-src/onemkl-rng-write
+block_cholesky_decomposition/ @oneapi-src/onemkl-lapack-write
+block_lu_decomposition/ @oneapi-src/onemkl-lapack-write
+computed_tomography/ @oneapi-src/onemkl-dft-write
+fourier_correlation/ @oneapi-src/onemkl-dft-write
+matrix_mul_mkl/ @oneapi-src/onemkl-blas-write
+monte_carlo_european_opt/ @oneapi-src/onemkl-rng-write
+monte_carlo_pi/ @oneapi-src/onemkl-rng-write
+random_sampling_without_replacement/ @oneapi-src/onemkl-rng-write
+sparse_conjugate_gradient/ @oneapi-src/onemkl-sparse-write
+student_t_test/ @oneapi-src/onemkl-rng-write
