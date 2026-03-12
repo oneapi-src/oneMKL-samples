@@ -1,4 +1,10 @@
-all: binomial_sycl.exe 
+#===============================================================================
+# Copyright (C) 2023 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#===============================================================================
+
+all: binomial_sycl.exe
 
 !if "$(init_on_host)" == "1"
 	INIT_ON_HOST=/DINIT_ON_HOST=1

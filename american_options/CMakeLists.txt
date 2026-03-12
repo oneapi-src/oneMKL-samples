@@ -1,3 +1,9 @@
+#===============================================================================
+# Copyright (C) 2026 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#===============================================================================
+
 cmake_minimum_required (VERSION 3.4.0)
 set(CMAKE_CXX_COMPILER "icpx")
 project (american_options)

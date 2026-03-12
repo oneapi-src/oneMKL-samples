@@ -1,3 +1,9 @@
+//==============================================================
+// Copyright © 2026 Intel Corporation
+//
+// SPDX-License-Identifier: MIT
+// =============================================================
+
 #include <sycl/sycl.hpp>
 
 namespace internal

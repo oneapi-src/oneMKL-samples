@@ -1,3 +1,9 @@
+#===============================================================================
+# Copyright (C) 2020 Intel Corporation
+#
+# SPDX-License-Identifier: MIT
+#===============================================================================
+
 # Makefile for NMAKE
 
 all: factor.exe solve.exe
