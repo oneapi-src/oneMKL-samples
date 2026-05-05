@@ -578,15 +578,29 @@ int main(int argc, char **argv)
 {
     print_banner();
 
-    sycl::device my_dev{sycl::default_selector_v};
+    try {
+        sycl::device my_dev{sycl::default_selector_v};
 
-    std::cout << "Running tests on " << my_dev.get_info<sycl::info::device::name>() << ".\n";
+        std::cout << "Running tests on " << my_dev.get_info<sycl::info::device::name>() << ".\n";
 
-    std::cout << "\tRunning with single precision real data type:" << std::endl;
-    run_sparse_pcg_example<float, std::int32_t>(my_dev);
+        std::cout << "\tRunning with single precision real data type:" << std::endl;
+        run_sparse_pcg_example<float, std::int32_t>(my_dev);
 
-    if (my_dev.get_info<sycl::info::device::double_fp_config>().size() != 0) {
-        std::cout << "\tRunning with double precision real data type:" << std::endl;
-        run_sparse_pcg_example<double, std::int32_t>(my_dev);
+        if (my_dev.get_info<sycl::info::device::double_fp_config>().size() != 0) {
+            std::cout << "\tRunning with double precision real data type:" << std::endl;
+            run_sparse_pcg_example<double, std::int32_t>(my_dev);
+        }
     }
+    catch (sycl::exception const &e) {
+        std::cout << "\t\tCaught synchronous SYCL exception:\n" << e.what() << std::endl;
+
+        return 1;
+    }
+    catch (std::exception const &e) {
+        std::cout << "\t\tCaught std exception:\n" << e.what() << std::endl;
+
+        return 1;
+    }
+
+    return 0;
 }
