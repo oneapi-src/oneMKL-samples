@@ -1,42 +1,20 @@
 # Contributing to oneMKL-samples
 
-The `main` branch contains code samples that work with the latest
-released version of the
-[Intel® oneAPI Math Kernel Library (oneMKL)](https://www.intel.com/content/www/us/en/developer/tools/oneapi/onemkl.html).
-Do not commit change to the `main` branch.
-
-All contributions must go into the `development` branch through a pull
-request (PR) where they will be reviewed before being merged. At specific
-dates, corresponding to the releases of the oneMKL, the `development` branch
-is merged into the `main` branch.
+Contributors must use forks on the main repository, to submit their changes.
+All contributions must go through a pull request (PR) where they will be reviewed before being merged.
 
 ## Fork the Repository
 
 1. To fork the repository from the GitHub user interface, click the
    **Fork** icon then select **Create a new fork**. The fork will be created
-   in few seconds. If you previously forked the repo, skip to the Step 5.
+   in few seconds. If you previously forked the repo, skip to Step 3.
 
-3. Select an **Owner** for the forked repository.
+2. Select an **Owner** for the forked repository.
 
-4. Deselect the **Copy the main branch only** check box.
-   (It should be unchecked before proceeding to the next step.)
+3. Click the **Create fork** button.
 
-5. Click the **Create fork** button.
-
-6. If you have an existing fork but do not have a `development` branch,
-   create a `development` branch by selecting the oneapi-src/oneMKL-samples
-   `development` branch in the dropdown as the branch source.
-
-7. Once your fork has been created, click the **Settings** icon and
-   find the **Default Branch** section.
-
-8. Click the **Switch to another branch** graphic.
-
-9.  From the dropdown, change the default branch to `development`.
-    Click the **Update** button.
-
-10. To create a branch in your fork, make sure the `development` branch is
-    selected from the dropdown, and enter the name of your branch in the text field.
+4. To create a branch in your fork, make sure the `main` branch is
+   selected from the dropdown, and enter the name of your branch in the text field.
 
 ## Clone Your Fork
 
@@ -52,6 +30,7 @@ similar to the following:
 
 ```
 git add .
+git status # to make sure only the intended files are staged; remove any extra files added by mistake
 git commit -s -m "<insert commit reason here>"
 git push origin
 ```
@@ -71,8 +50,7 @@ When submitting a pull request, keep the following guidelines in mind:
   additional files you did not expect included in the commit,
   troubleshoot before submitting the PR.)
 
-- Never open a pull request to the `main` branch directly, all pull
-  requests must be targeting the `development` branch.
+- All pull requests must target the `main` branch.
 
 ## Log a Bug or Request a Feature
 
@@ -84,7 +62,7 @@ When reporting a bug, provide the following information when possible:
 - Steps to reproduce the bug.
 - Whether you found or reproduced the bug using the latest sample in
   the `main` branch and the latest oneMKL.
-- Version numbers or other information about the CPU/GPU/FPGA/device,
+- Version numbers or other information about the CPU/GPU/device,
   platform, operating system or distribution you used to find the bug.
 
 For usage, installation, or other requests for help, go to the
