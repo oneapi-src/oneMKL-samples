@@ -11,6 +11,7 @@
 *         positive definite block tridiagonal matrix.
 ************************************************************************/
 #include <cstdint>
+#include <iostream>
 
 #include <sycl/sycl.hpp>
 #include "oneapi/mkl.hpp"

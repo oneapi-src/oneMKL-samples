@@ -13,6 +13,7 @@
 *         rectangular matrix.
 ************************************************************************/
 #include <cstdint>
+#include <iostream>
 #include <sycl/sycl.hpp>
 #include "oneapi/mkl.hpp"
 

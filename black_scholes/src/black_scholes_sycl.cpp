@@ -10,6 +10,7 @@
 #error "SYCL is not enabled""
 #endif
 
+#include <iostream>
 #include <sycl/sycl.hpp>
 #include <oneapi/mkl.hpp>
 
