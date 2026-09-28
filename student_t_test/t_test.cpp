@@ -8,7 +8,7 @@
  *
  *  Content:
  *       This file contains Student's T-test DPC++ implementation with
- *       buffer APIs.
+ *       USM APIs.
  *
  *******************************************************************************/
 
@@ -35,31 +35,32 @@ static const float threshold = 1.95996f;
 // Returns: -1 if something went wrong, 1 - in case of NULL hypothesis should be
 // accepted, 0 - in case of NULL hypothesis should be rejected
 template <typename RealType>
-std::int32_t t_test(sycl::queue &q, sycl::buffer<RealType, 1> &r,
-                    std::int64_t n, RealType expected_mean) {
+std::int32_t t_test(sycl::queue& q, RealType* r, std::int64_t n,
+                    RealType expected_mean) {
   std::int32_t res = -1;
   RealType sqrt_n_observations = std::sqrt(static_cast<RealType>(n));
 
-  // Create buffers to be passed inside oneMKL stats functions
-  sycl::buffer<RealType, 1> mean_buf(sycl::range{1});
-  sycl::buffer<RealType, 1> variance_buf(sycl::range{1});
+  // Allocate memory to be passed inside oneMKL stats functions
+  RealType* mean = sycl::malloc_shared<RealType>(1, q);
+  RealType* variance = sycl::malloc_shared<RealType>(1, q);
   // Perform computations of mean and variance
   auto dataset =
       oneapi::mkl::stats::make_dataset<oneapi::mkl::stats::layout::row_major>(
           1, n, r);
-  oneapi::mkl::stats::mean(q, dataset, mean_buf);
+  oneapi::mkl::stats::mean(q, dataset, mean);
   q.wait_and_throw();
-  oneapi::mkl::stats::central_moment(q, mean_buf, dataset, variance_buf);
+  oneapi::mkl::stats::central_moment(q, mean, dataset, variance);
   q.wait_and_throw();
-  // Create Host accessors and check the condition
-  sycl::host_accessor mean_acc(mean_buf);
-  sycl::host_accessor variance_acc(variance_buf);
-  if ((std::abs(mean_acc[0] - expected_mean) * sqrt_n_observations /
-       std::sqrt(variance_acc[0])) < static_cast<RealType>(threshold)) {
+  // Check the condition
+  if ((std::abs(mean[0] - expected_mean) * sqrt_n_observations /
+       std::sqrt(variance[0])) < static_cast<RealType>(threshold)) {
     res = 1;
   } else {
     res = 0;
   }
+  // Free allocated memory
+  sycl::free(mean, q);
+  sycl::free(variance, q);
   return res;
 }
 
@@ -67,16 +68,14 @@ std::int32_t t_test(sycl::queue &q, sycl::buffer<RealType, 1> &r,
 // Returns: -1 if something went wrong, 1 - in case of NULL hypothesis should be
 // accepted, 0 - in case of NULL hypothesis should be rejected
 template <typename RealType>
-std::int32_t t_test(sycl::queue &q, sycl::buffer<RealType, 1> &r1,
-                    std::int64_t n1, sycl::buffer<RealType, 1> &r2,
-                    std::int64_t n2) {
+std::int32_t t_test(sycl::queue& q, RealType* r1, std::int64_t n1,
+                    RealType* r2, std::int64_t n2) {
   std::int32_t res = -1;
-
-  // Create buffers to be passed inside oneMKL stats functions
-  sycl::buffer<RealType, 1> mean1_buf(sycl::range{1});
-  sycl::buffer<RealType, 1> variance1_buf(sycl::range{1});
-  sycl::buffer<RealType, 1> mean2_buf(sycl::range{1});
-  sycl::buffer<RealType, 1> variance2_buf(sycl::range{1});
+  // Allocate memory to be passed inside oneMKL stats functions
+  RealType* mean1 = sycl::malloc_shared<RealType>(1, q);
+  RealType* variance1 = sycl::malloc_shared<RealType>(1, q);
+  RealType* mean2 = sycl::malloc_shared<RealType>(1, q);
+  RealType* variance2 = sycl::malloc_shared<RealType>(1, q);
   // Perform computations of mean and variance
   auto dataset1 =
       oneapi::mkl::stats::make_dataset<oneapi::mkl::stats::layout::row_major>(
@@ -84,46 +83,47 @@ std::int32_t t_test(sycl::queue &q, sycl::buffer<RealType, 1> &r1,
   auto dataset2 =
       oneapi::mkl::stats::make_dataset<oneapi::mkl::stats::layout::row_major>(
           1, n2, r2);
-  oneapi::mkl::stats::mean(q, dataset1, mean1_buf);
+  oneapi::mkl::stats::mean(q, dataset1, mean1);
   q.wait_and_throw();
-  oneapi::mkl::stats::central_moment(q, mean1_buf, dataset1, variance1_buf);
-  oneapi::mkl::stats::mean(q, dataset2, mean2_buf);
+  oneapi::mkl::stats::central_moment(q, mean1, dataset1, variance1);
+  oneapi::mkl::stats::mean(q, dataset2, mean2);
   q.wait_and_throw();
-  oneapi::mkl::stats::central_moment(q, mean2_buf, dataset2, variance2_buf);
+  oneapi::mkl::stats::central_moment(q, mean2, dataset2, variance2);
   q.wait_and_throw();
-  // Create Host accessors and check the condition
-  sycl::host_accessor mean1_acc{mean1_buf};
-  sycl::host_accessor variance1_acc{variance1_buf};
-  sycl::host_accessor mean2_acc{mean2_buf};
-  sycl::host_accessor variance2_acc{variance2_buf};
-  bool almost_equal = (variance1_acc[0] < 2 * variance2_acc[0]) ||
-                      (variance2_acc[0] < 2 * variance1_acc[0]);
+  // Check the condition
+  bool almost_equal =
+      (variance1[0] < 2 * variance2[0]) || (variance2[0] < 2 * variance1[0]);
   if (almost_equal) {
-    if ((std::abs(mean1_acc[0] - mean2_acc[0]) /
+    if ((std::abs(mean1[0] - mean2[0]) /
          std::sqrt((static_cast<RealType>(1.0) / static_cast<RealType>(n1) +
-                    static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
-                  ((n1 - 1) * (n1 - 1) * variance1_acc[0] +
-                   (n2 - 1) * (n2 - 1) * variance2_acc[0]) /
-                   (n1 + n2 - 2))) < static_cast<RealType>(threshold)) {
+                     static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
+                    ((n1 - 1) * (n1 - 1) * variance1[0] +
+                     (n2 - 1) * (n2 - 1) * variance2[0]) /
+                    (n1 + n2 - 2))) < static_cast<RealType>(threshold)) {
       res = 1;
     } else {
       res = 0;
     }
   } else {
-    if ((std::abs(mean1_acc[0] - mean2_acc[0]) /
-         std::sqrt((variance1_acc[0] + variance2_acc[0]))) <
+    if ((std::abs(mean1[0] - mean2[0]) /
+         std::sqrt((variance1[0] + variance2[0]))) <
         static_cast<RealType>(threshold)) {
       res = 1;
     } else {
       res = 0;
     }
   }
+  // Free allocated memory
+  sycl::free(mean1, q);
+  sycl::free(variance1, q);
+  sycl::free(mean2, q);
+  sycl::free(variance2, q);
   return res;
 }
 
-int main(int argc, char **argv) {
-  std::cout << "\nStudent's T-test Simulation" << std::endl;
-  std::cout << "Buffer Api" << std::endl;
+int main(int argc, char** argv) {
+  std::cout << "Student's T-test Simulation" << std::endl;
+  std::cout << "Unified Shared Memory Api" << std::endl;
   std::cout << "-------------------------------------" << std::endl;
 
   using fp_type = float;
@@ -157,10 +157,10 @@ int main(int argc, char **argv) {
 
   // This exception handler with catch async exceptions
   auto exception_handler = [](sycl::exception_list exceptions) {
-    for (std::exception_ptr const &e : exceptions) {
+    for (std::exception_ptr const& e : exceptions) {
       try {
         std::rethrow_exception(e);
-      } catch (sycl::exception const &e) {
+      } catch (sycl::exception const& e) {
         std::cout << "Caught asynchronous SYCL exception during generation:\n"
                   << e.what() << std::endl;
       }
@@ -172,21 +172,24 @@ int main(int argc, char **argv) {
   try {
     // Queue constructor passed exception handler
     sycl::queue q(sycl::default_selector_v, exception_handler);
-    // Prepare buffers for random output
-    sycl::buffer<fp_type, 1> rng_buf0(n_points);
-    sycl::buffer<fp_type, 1> rng_buf1(n_points);
+    // Allocate memory for random output
+    fp_type* rng_arr0 = sycl::malloc_shared<fp_type>(n_points, q);
+    fp_type* rng_arr1 = sycl::malloc_shared<fp_type>(n_points, q);
     // Create engine object
     oneapi::mkl::rng::default_engine engine(q, seed);
     // Create distribution object
     oneapi::mkl::rng::gaussian<fp_type> distribution(mean, std_dev);
     // Perform generation
-    oneapi::mkl::rng::generate(distribution, engine, n_points, rng_buf0);
-    oneapi::mkl::rng::generate(distribution, engine, n_points, rng_buf1);
+    oneapi::mkl::rng::generate(distribution, engine, n_points, rng_arr0);
+    oneapi::mkl::rng::generate(distribution, engine, n_points, rng_arr1);
     q.wait_and_throw();
     // Launch T-test with expected mean
-    res0 = t_test(q, rng_buf0, n_points, mean);
+    res0 = t_test(q, rng_arr0, n_points, mean);
     // Launch T-test with two input arrays
-    res1 = t_test(q, rng_buf0, n_points, rng_buf1, n_points);
+    res1 = t_test(q, rng_arr0, n_points, rng_arr1, n_points);
+    // Free allocated memory
+    sycl::free(rng_arr0, q);
+    sycl::free(rng_arr1, q);
   } catch (...) {
     // Some other exception detected
     std::cout << "Failure" << std::endl;
