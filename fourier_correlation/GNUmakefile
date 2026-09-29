@@ -10,23 +10,19 @@ default: run_all
 
 all: run_all
 
-run_all: fcorr_1d_buff fcorr_1d_usm fcorr_2d_usm
-	./fcorr_1d_buff 4096
-	./fcorr_1d_usm 4096
-	./fcorr_2d_usm
+run_all: fcorr_1d fcorr_2d
+	./fcorr_1d 4096
+	./fcorr_2d
 
 DPCPP_OPTS = -DMKL_ILP64 -qmkl-ilp64 -qmkl-sycl-impl="blas,dft,rng,vm"
 
-fcorr_1d_buff: fcorr_1d_buffers.cpp
+fcorr_1d: fcorr_1d.cpp
 	icpx $< -fsycl -o $@ $(DPCPP_OPTS)
 
-fcorr_1d_usm: fcorr_1d_usm.cpp
-	icpx $< -fsycl -o $@ $(DPCPP_OPTS)
-
-fcorr_2d_usm: fcorr_2d_usm.cpp
+fcorr_2d: fcorr_2d.cpp
 	icpx $< -fsycl -o $@ $(DPCPP_OPTS)
 
 clean:
-	-rm -f fcorr_1d_buff fcorr_1d_usm fcorr_2d_usm
+	-rm -f fcorr_1d fcorr_2d
 
 .PHONY: run_all clean all
