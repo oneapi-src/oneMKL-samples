@@ -7,8 +7,7 @@
 /*
 *
 *  Content:
-*       This file contains Monte Carlo Pi number evaluation benchmark for DPC++
-*       USM-based interface of random number generators.
+*       This file contains Monte Carlo Pi number evaluation benchmark
 *
 *******************************************************************************/
 
@@ -79,7 +78,6 @@ int main(int argc, char ** argv) {
 
     std::cout << std::endl;
     std::cout << "Monte Carlo pi Calculation Simulation" << std::endl;
-    std::cout << "Unified Shared Memory Api" << std::endl;
     std::cout << "-------------------------------------" << std::endl;
 
     double estimated_pi;
