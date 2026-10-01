@@ -30,7 +30,7 @@ $$ \rho_{u, v} = \dfrac{1}{\sigma_{u}\sigma_{v}} \left( \max_{\lbrace s_{1}, \ld
 
 where $\overline{x}$ and $\sigma_{x}$ are the average value and standard deviations of $x$, respectively.
 
-Two implementations of the one-dimensional algorithm are provided: one that uses explicit buffering and one that uses Unified Shared Memory (USM). Both implementations compute the cross-correlation on the selected device. A two-dimensional Fourier correlation example using USM is also included, illustrating how to define and use a two-dimensional data layout compliant with the requirements for in-place real-to-complex and complex-to-real transforms.
+An implementation of the one-dimensional algorithm using Unified Shared Memory (USM) is provided, which computes the cross-correlation on the selected device. A two-dimensional Fourier correlation example using USM is also included, illustrating how to define and use a two-dimensional data layout compliant with the requirements for in-place real-to-complex and complex-to-real transforms.
 
 ## Using Visual Studio Code* (Optional)
 
@@ -65,7 +65,7 @@ After learning how to use the extensions for Intel oneAPI Toolkits, return to th
 >For more information on environment variables, see Use the setvars Script for [Linux or macOS](https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2023-1/use-the-setvars-script-with-linux-or-macos.html), or [Windows](https://www.intel.com/content/www/us/en/docs/oneapi/programming-guide/2023-1/use-the-setvars-script-with-windows.html).
 
 ### On a Linux System
-Run `make` to build and run the sample. One two-dimensional program (using USM) and two one-dimensional programs (one that uses explicit buffering and one that uses USM) are created.
+Run `make` to build and run the sample. One one-dimensional program and one two-dimensional program (both using USM) are created.
 
 You can remove all generated files with `make clean`.
 
@@ -83,13 +83,9 @@ To find more information about the variable follow the link:
 [ONEAPI_DEVICE_SELECTOR](https://github.com/intel/llvm/blob/sycl/sycl/doc/EnvironmentVariables.md#oneapi_device_selector).
 
 ### Example of Output
-The one-dimensional programs generate two artificial one-dimensional signals, computes their cross-correlation, and report the optimal (right-)shift for the second signal maximizing its correlation score with the first. The output should be similar to this:
+The one-dimensional program generates two artificial one-dimensional signals, computes their cross-correlation, and reports the optimal (right-)shift for the second signal maximizing its correlation score with the first. The output should be similar to this:
 ```
-./fcorr_1d_buff 4096
-Running on: Intel(R) Data Center GPU Max 1550
-Right-shift the second signal 2048 elements to get a maximum, normalized correlation score of 1 (treating the signals as periodic).
-Max difference between naive and Fourier-based calculations : 2.38419e-07 (verification threshold: 6.66459e-06).
-./fcorr_1d_usm 4096
+./fcorr_1d 4096
 Running on: Intel(R) Data Center GPU Max 1550
 Right-shift the second signal 2048 elements to get a maximum, normalized correlation score of 1 (treating the signals as periodic).
 Max difference between naive and Fourier-based calculations : 2.38419e-07 (verification threshold: 6.66459e-06).
@@ -97,7 +93,7 @@ Max difference between naive and Fourier-based calculations : 2.38419e-07 (verif
 For the two-dimensional case, the program generates two artificial two-dimensional images, computes their cross-correlation, and report the optimal translational vector for the second image maximizing its correlation score with the first. The output should be similar to this:
 
 ```
-./fcorr_2d_usm
+./fcorr_2d
 Running on: Intel(R) Data Center GPU Max 1550
 First image:
 0 0 0 0 0 0 0 0

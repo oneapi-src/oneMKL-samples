@@ -7,8 +7,7 @@
 /*
 *
 *  Content:
-*       This file contains Monte Carlo Pi number evaluation benchmark for DPC++
-*       interface of random number generators.
+*       This file contains Monte Carlo Pi number evaluation benchmark
 *
 *******************************************************************************/
 
@@ -33,7 +32,6 @@ static const auto n_samples = 120'000'000;
 
 double estimate_pi(sycl::queue& q, size_t n_points) {
     double estimated_pi;         // Estimated value of Pi
-    size_t n_under_curve = 0;    // Number of points fallen under the curve
 
     // Step 1. Generate n_points * 2 random numbers
     // 1.1. Generator initialization
@@ -42,38 +40,36 @@ double estimate_pi(sycl::queue& q, size_t n_points) {
     // Create an object of distribution (by default float, a = 0.0f, b = 1.0f)
     mkl::rng::uniform distr;
 
-    sycl::buffer<float, 1> rng_buf(n_points * 2);
+    float* rng_ptr = sycl::malloc_shared<float>(n_points * 2, q);
 
     // 1.2. Random number generation
-    mkl::rng::generate(distr, engine, n_points * 2, rng_buf);
+    auto event = mkl::rng::generate(distr, engine, n_points * 2, rng_ptr);
 
     // Step 2. Count points under curve (x ^ 2 + y ^ 2 < 1.0f)
     constexpr size_t count_per_thread = 32;
+    size_t *n_under_curve = sycl::malloc_host<size_t>(1, q); // Number of points fallen under the curve
+    *n_under_curve = 0;
+    auto reductor = sycl::reduction(n_under_curve, size_t(0), std::plus<size_t>{});
 
-    {
-        sycl::buffer<size_t> count_buf{ &n_under_curve, 1 };
-
-        q.submit([&] (sycl::handler& h) {
-            auto rng_acc = rng_buf.template get_access<sycl::access::mode::read>(h);
-            auto reductor = sycl::reduction(count_buf, h, size_t(0), std::plus<size_t>());
-
-            h.parallel_for(sycl::range<1>(n_points / count_per_thread), reductor,
-                [=](sycl::item<1> item, auto& sum) {
-                    sycl::vec<float, 2> r;
-                    size_t count = 0;
-                    for(int i = 0; i < count_per_thread; i++) {
-                        r.load(i + item.get_id(0) * count_per_thread, rng_acc.template get_multi_ptr<sycl::access::decorated::yes>());
-                        if(sycl::length(r) <= 1.0f) {
-                            count++;
+    q.parallel_for(sycl::range<1>(n_points / count_per_thread), event, reductor,
+                   [=](sycl::item<1> item, auto& sum) {
+                        sycl::vec<float, 2> r;
+                        size_t count = 0;
+                        for(int i = 0; i < count_per_thread; i++) {
+                            r.load(i + item.get_id(0) * count_per_thread, sycl::global_ptr<float>(rng_ptr));
+                            if(sycl::length(r) <= 1.0f) {
+                                count++;
+                            }
                         }
-                    }
-                    sum += count;
-            });
-        });
-    }
+                        sum += count;
+                   }).wait_and_throw();
 
     // Step 3. Calculate approximated value of Pi
-    estimated_pi = n_under_curve / ((double)n_points) * 4.0;
+    estimated_pi = *n_under_curve / ((double)n_points) * 4.0;
+
+    sycl::free(rng_ptr, q);
+    sycl::free(n_under_curve, q);
+
     return estimated_pi;
 
 }
@@ -82,7 +78,6 @@ int main(int argc, char ** argv) {
 
     std::cout << std::endl;
     std::cout << "Monte Carlo pi Calculation Simulation" << std::endl;
-    std::cout << "Buffer Api" << std::endl;
     std::cout << "-------------------------------------" << std::endl;
 
     double estimated_pi;

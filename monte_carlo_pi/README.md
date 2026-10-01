@@ -20,8 +20,8 @@ APIs that can be called from within a kernel; both kinds of APIs are illustrated
 This sample illustrates how to create an RNG engine object (the source of
 pseudo-randomness), a distribution object (specifying the desired probability
 distribution), and finally generate the random numbers themselves. Random number
-generation can be done from the host, storing the results in a SYCL*-compliant
-buffer or USM pointer, or directly in a kernel.
+generation can be done from the host, storing the results in a Unified Shared
+Memory (USM) pointer, or directly in a kernel.
 
 In this sample, a Philox 4x32x10 generator is used, and a uniform distribution
 is the basis for the Monte Carlo simulation. oneMKL provides many other
@@ -58,7 +58,7 @@ To learn more about the extensions, see the
 > For more information on configuring environment variables, see [Use the setvars Script with Linux* or MacOS*](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-linux-or-macos.html) or [Use the setvars Script with Windows*](https://www.intel.com/content/www/us/en/develop/documentation/oneapi-programming-guide/top/oneapi-development-environment-setup/use-the-setvars-script-with-windows.html).
 
 ### On a Linux* System
-Run `make` to build and run the sample. Three programs are generated, which illustrate different APIs for random number generation.
+Run `make` to build and run the sample. Two programs are generated, which illustrate different APIs for random number generation.
 
 You can remove all generated files with `make clean`.
 
@@ -74,21 +74,9 @@ To find more information about the variable follow the link:
 [ONEAPI_DEVICE_SELECTOR](https://github.com/intel/llvm/blob/sycl/sycl/doc/EnvironmentVariables.md#oneapi_device_selector).
 
 ### Example of Output
-If everything is working correctly, after building you will see step-by-step output from each of the three example programs, providing the generated estimate of &pi;.
+If everything is working correctly, after building you will see step-by-step output from each of the two example programs, providing the generated estimate of &pi;.
 ```
 ./mc_pi
-
-Monte Carlo pi Calculation Simulation
-Buffer API
--------------------------------------
-Number of points = 120000000
-Estimated value of Pi = 3.14106
-Exact value of Pi = 3.14159
-Absolute error = 0.000530387
-
-TEST PASSED
-
-./mc_pi_usm
 
 Monte Carlo pi Calculation Simulation
 Unified Shared Memory API

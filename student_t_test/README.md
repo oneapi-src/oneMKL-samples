@@ -42,14 +42,14 @@ To learn more about the extensions, see the
 
 
 ### On a Linux* System
-Run `make` to build and run the sample. Two programs (t_test and t_test_usm)
-are generated, which illustrate different APIs for random number generation.
+Run `make` to build and run the sample. One program (t_test) is generated, which
+illustrates the Unified Shared Memory (USM) APIs for random number generation.
 
 You can remove all generated files with `make clean`.
 
 ### On a Windows* System
-Run `nmake` to build and run the sample. Two programs (t_test.exe and
-t_test_usm.exe) are generated, which illustrate different APIs for random number generation.
+Run `nmake` to build and run the sample. One program (t_test.exe) is generated,
+which illustrates the Unified Shared Memory (USM) APIs for random number generation.
 
 You can remove all generated files with `nmake clean`.
 
@@ -63,21 +63,10 @@ To find more information about the variable follow the link:
 
 ### Example of Output
 If everything is working correctly, after running `make` (`nmake`) you will see
-step-by-step output from each of the two example programs, providing the
-decision about accepting null hypothesis.
+step-by-step output from the example program, providing the decision about
+accepting null hypothesis.
 ```
 ./t_test
-
-Student's T-test Simulation
-Buffer Api
--------------------------------------
-Number of random samples = 1000000 with mean = 0, std_dev = 1
-T-test result with expected mean: 1
-T-test result with two input arrays: 1
-
-TEST PASSED
-
-./t_test_usm
 
 Student's T-test Simulation
 Unified Shared Memory Api

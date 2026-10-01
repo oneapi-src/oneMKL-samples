@@ -10,24 +10,20 @@ default: run_all
 
 all: run_all
 
-run_all: fcorr_1d_buff.exe fcorr_1d_usm.exe fcorr_2d_usm.exe
-	.\fcorr_1d_buff 1024
-	.\fcorr_1d_usm 1024
-	.\fcorr_2d_usm
+run_all: fcorr_1d.exe fcorr_2d.exe
+	.\fcorr_1d 1024
+	.\fcorr_2d
 
 DPCPP_OPTS=-DMKL_ILP64 -I"%MKLROOT%\include" /Qmkl-ilp64 /Qmkl-sycl-impl="blas,dft,rng,vm" OpenCL.lib /EHsc
 
-fcorr_1d_buff.exe: fcorr_1d_buffers.cpp
-	icx-cl -fsycl fcorr_1d_buffers.cpp /Fefcorr_1d_buff.exe $(DPCPP_OPTS)
+fcorr_1d.exe: fcorr_1d.cpp
+	icx-cl -fsycl fcorr_1d.cpp /Fefcorr_1d.exe $(DPCPP_OPTS)
 
-fcorr_1d_usm.exe: fcorr_1d_usm.cpp
-	icx-cl -fsycl fcorr_1d_usm.cpp /Fefcorr_1d_usm.exe $(DPCPP_OPTS)
-
-fcorr_2d_usm.exe: fcorr_2d_usm.cpp
-	icx-cl -fsycl fcorr_2d_usm.cpp /Fefcorr_2d_usm.exe $(DPCPP_OPTS)
+fcorr_2d.exe: fcorr_2d.cpp
+	icx-cl -fsycl fcorr_2d.cpp /Fefcorr_2d.exe $(DPCPP_OPTS)
 
 clean:
-	del /q fcorr_1d_buff.exe fcorr_1d_usm.exe fcorr_2d_usm.exe
-	del /q fcorr_1d_buff.exp fcorr_1d_usm.exp fcorr_2d_usm.exp
+	del /q fcorr_1d.exe fcorr_2d.exe
+	del /q fcorr_1d.exp fcorr_2d.exp
 
 pseudo: run_all clean all
