@@ -90,23 +90,27 @@ std::int32_t t_test(sycl::queue& q, RealType* r1, std::int64_t n1,
   q.wait_and_throw();
   oneapi::mkl::stats::central_moment(q, mean2, dataset2, variance2);
   q.wait_and_throw();
+  // central_moment returns the second central moment (1/n) * sum((x - mean)^2),
+  // so n * variance is the sum of squared deviations from the mean.
   // Check the condition
   bool almost_equal =
-      (variance1[0] < 2 * variance2[0]) || (variance2[0] < 2 * variance1[0]);
+      (variance1[0] < 2 * variance2[0]) && (variance2[0] < 2 * variance1[0]);
   if (almost_equal) {
     if ((std::abs(mean1[0] - mean2[0]) /
          std::sqrt((static_cast<RealType>(1.0) / static_cast<RealType>(n1) +
                      static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
-                    ((n1 - 1) * (n1 - 1) * variance1[0] +
-                     (n2 - 1) * (n2 - 1) * variance2[0]) /
-                    (n1 + n2 - 2))) < static_cast<RealType>(threshold)) {
+                    (static_cast<RealType>(n1) * variance1[0] +
+                     static_cast<RealType>(n2) * variance2[0]) /
+                    static_cast<RealType>(n1 + n2 - 2))) <
+        static_cast<RealType>(threshold)) {
       res = 1;
     } else {
       res = 0;
     }
   } else {
     if ((std::abs(mean1[0] - mean2[0]) /
-         std::sqrt((variance1[0] + variance2[0]))) <
+         std::sqrt(variance1[0] / static_cast<RealType>(n1 - 1) +
+                   variance2[0] / static_cast<RealType>(n2 - 1))) <
         static_cast<RealType>(threshold)) {
       res = 1;
     } else {
