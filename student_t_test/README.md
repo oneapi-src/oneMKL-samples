@@ -26,9 +26,7 @@ The mean and the 2nd order central moment are computed using
 `oneapi::dpl::reduce` and `oneapi::dpl::transform_reduce` with a device execution
 policy bound to the SYCL queue. The algorithms read USM data and return scalar
 results. The central moment is the sum of squared deviations from the mean
-normalized by `n`, consistent with the definition used by
-`oneapi::mkl::stats::central_moment`. This replaces the deprecated oneMKL SYCL
-Summary Statistics APIs.
+normalized by `n`.
 
 ## Building the Student's T-test Sample
 

@@ -40,8 +40,7 @@ static const float expected_std_dev = 1.0f;
 static const float threshold = 1.95996f;
 
 // Compute mean and 2nd order central moment with oneDPL.
-// The central moment is normalized by n, consistent with the definition used by
-// oneapi::mkl::stats::central_moment:
+// The central moment is normalized by n:
 //   C_2 = 1/n * sum_{j=1}^{n} (x_j - M)^2
 // The input must contain n USM elements whose generation has completed.
 // At least two observations are required so that the central moment is
