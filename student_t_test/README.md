@@ -1,7 +1,7 @@
 # `Student's T-test` Sample
 The Student's T-test sample shows how to use the Intel® oneAPI Math Kernel
-Library (oneMKL) Vector Statistics functionality to decide if the null
-hypothesis should be accepted or rejected.
+Library (oneMKL) random number generation and Intel® oneAPI DPC++ Library (oneDPL)
+reductions to decide if the null hypothesis should be accepted or rejected.
 
 ## Purpose
 
@@ -12,8 +12,8 @@ null hypothesis, which states that there is no effective difference between the
 observed sample mean and the hypothesized or stated population mean—i.e., that
 any measured difference is due only to chance.
 
-This sample uses the oneMKL Vector Statistics functionality to produce the
-random numbers and compute statistics.
+This sample uses oneMKL to produce the random numbers and oneDPL reductions to
+compute statistics.
 
 ## Key Implementation Details
 
@@ -22,8 +22,18 @@ source of pseudo-randomness), a distribution object (specifying the desired
 probability distribution), and generate the random numbers themselves. After the
 numbers are produced, basic statistical properties such as mean and standard
 deviation are computed to be processed inside the Student's T-test algorithm.
+The mean and the 2nd order central moment are computed using
+`oneapi::dpl::reduce` and `oneapi::dpl::transform_reduce` with a device execution
+policy bound to the SYCL queue. The algorithms read USM data and return scalar
+results. The central moment is the sum of squared deviations from the mean
+normalized by `n`.
 
 ## Building the Student's T-test Sample
+
+The sample requires oneMKL, oneDPL, and a SYCL compiler with C++17 support.
+Initialize their environments before building. For a separate oneDPL installation
+or source checkout, source `<oneDPL-root>/env/vars.sh` on Linux, or run
+`<oneDPL-root>\env\vars.bat` on Windows, to make its headers available.
 
 ### Using Visual Studio Code*  (Optional)
 

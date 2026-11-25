@@ -12,12 +12,21 @@
  *
  *******************************************************************************/
 
+#include <oneapi/dpl/execution>
+#include <oneapi/dpl/numeric>
 #include <sycl/sycl.hpp>
-#include <cstdlib>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
 #include <iostream>
-#include <vector>
+#include <locale>
+#include <memory>
+#include <sstream>
+#include <stdexcept>
+#include <utility>
 
-#include "oneapi/mkl.hpp"
+#include "oneapi/mkl/rng.hpp"
 
 // Initialization value for random number generator
 static const int seed = 7777;
@@ -31,94 +40,127 @@ static const float expected_std_dev = 1.0f;
 // degrees of freedom
 static const float threshold = 1.95996f;
 
-// T-test function with expected mean
-// Returns: -1 if something went wrong, 1 - in case of NULL hypothesis should be
-// accepted, 0 - in case of NULL hypothesis should be rejected
-template <typename RealType>
-std::int32_t t_test(sycl::queue& q, RealType* r, std::int64_t n,
-                    RealType expected_mean) {
-  std::int32_t res = -1;
-  RealType sqrt_n_observations = std::sqrt(static_cast<RealType>(n));
+// Compute mean and 2nd order central moment with oneDPL.
+// The central moment is normalized by n:
+//   C_2 = 1/n * sum_{j=1}^{n} (x_j - M)^2
+// The input must contain n USM elements whose generation has completed.
+// At least two observations are required so that the central moment is
+// meaningful for the T-test.
+template <typename Policy, typename RealType>
+std::pair<RealType, RealType> mean_and_central_moment(Policy& policy,
+                                                      const RealType* r,
+                                                      std::int64_t n) {
+  if (n < 2) {
+    throw std::invalid_argument(
+        "Mean and central moment require at least two observations");
+  }
+  const RealType mean = oneapi::dpl::reduce(policy, r, r + n, RealType(0)) /
+                        static_cast<RealType>(n);
 
-  // Allocate memory to be passed inside oneMKL stats functions
-  RealType* mean = sycl::malloc_shared<RealType>(1, q);
-  RealType* variance = sycl::malloc_shared<RealType>(1, q);
+  // Sum squared deviations from the mean (two-pass) to avoid cancellation.
+  const RealType squared_deviations = oneapi::dpl::transform_reduce(
+      policy, r, r + n, RealType(0), std::plus<RealType>(),
+      [=](RealType value) {
+        const RealType difference = value - mean;
+        return difference * difference;
+      });
+  // oneDPL reductions are blocking and return the result directly; this wait
+  // only forwards any asynchronous errors to the queue's exception handler.
+  policy.queue().wait_and_throw();
+  return {mean, squared_deviations / static_cast<RealType>(n)};
+}
+
+// T-test function with expected mean
+// Returns: 1 - in case of NULL hypothesis should be accepted, 0 - in case of
+// NULL hypothesis should be rejected. Throws on invalid input.
+template <typename Policy, typename RealType>
+std::int32_t t_test(Policy& policy, RealType* r, std::int64_t n,
+                    RealType expected_mean) {
+  std::int32_t res;
+
   // Perform computations of mean and variance
-  auto dataset =
-      oneapi::mkl::stats::make_dataset<oneapi::mkl::stats::layout::row_major>(
-          1, n, r);
-  oneapi::mkl::stats::mean(q, dataset, mean);
-  q.wait_and_throw();
-  oneapi::mkl::stats::central_moment(q, mean, dataset, variance);
-  q.wait_and_throw();
-  // Check the condition
-  if ((std::abs(mean[0] - expected_mean) * sqrt_n_observations /
-       std::sqrt(variance[0])) < static_cast<RealType>(threshold)) {
+  const auto [mean, variance] = mean_and_central_moment(policy, r, n);
+  if (!(variance > static_cast<RealType>(0))) {
+    throw std::domain_error("T-test is undefined for zero variance");
+  }
+  // T statistic for the central moment normalized by n (s^2 denotes the
+  // sample variance normalized by n - 1):
+  //   |mean - expected_mean| * sqrt(n) / s
+  //   = |mean - expected_mean| * sqrt(n - 1) / sqrt(variance)
+  if ((std::abs(mean - expected_mean) *
+       std::sqrt(static_cast<RealType>(n - 1)) / std::sqrt(variance)) <
+      static_cast<RealType>(threshold)) {
     res = 1;
   } else {
     res = 0;
   }
-  // Free allocated memory
-  sycl::free(mean, q);
-  sycl::free(variance, q);
   return res;
 }
 
 // T-test function with two input arrays
-// Returns: -1 if something went wrong, 1 - in case of NULL hypothesis should be
-// accepted, 0 - in case of NULL hypothesis should be rejected
-template <typename RealType>
-std::int32_t t_test(sycl::queue& q, RealType* r1, std::int64_t n1,
+// Returns: 1 - in case of NULL hypothesis should be accepted, 0 - in case of
+// NULL hypothesis should be rejected. Throws on invalid input.
+template <typename Policy, typename RealType>
+std::int32_t t_test(Policy& policy, RealType* r1, std::int64_t n1,
                     RealType* r2, std::int64_t n2) {
-  std::int32_t res = -1;
-  // Allocate memory to be passed inside oneMKL stats functions
-  RealType* mean1 = sycl::malloc_shared<RealType>(1, q);
-  RealType* variance1 = sycl::malloc_shared<RealType>(1, q);
-  RealType* mean2 = sycl::malloc_shared<RealType>(1, q);
-  RealType* variance2 = sycl::malloc_shared<RealType>(1, q);
+  std::int32_t res;
   // Perform computations of mean and variance
-  auto dataset1 =
-      oneapi::mkl::stats::make_dataset<oneapi::mkl::stats::layout::row_major>(
-          1, n1, r1);
-  auto dataset2 =
-      oneapi::mkl::stats::make_dataset<oneapi::mkl::stats::layout::row_major>(
-          1, n2, r2);
-  oneapi::mkl::stats::mean(q, dataset1, mean1);
-  q.wait_and_throw();
-  oneapi::mkl::stats::central_moment(q, mean1, dataset1, variance1);
-  oneapi::mkl::stats::mean(q, dataset2, mean2);
-  q.wait_and_throw();
-  oneapi::mkl::stats::central_moment(q, mean2, dataset2, variance2);
-  q.wait_and_throw();
+  const auto [mean1, variance1] = mean_and_central_moment(policy, r1, n1);
+  const auto [mean2, variance2] = mean_and_central_moment(policy, r2, n2);
+  if (!(variance1 > static_cast<RealType>(0)) ||
+      !(variance2 > static_cast<RealType>(0))) {
+    throw std::domain_error("T-test is undefined for zero variance");
+  }
   // Check the condition
   bool almost_equal =
-      (variance1[0] < 2 * variance2[0]) || (variance2[0] < 2 * variance1[0]);
+      (variance1 < 2 * variance2) && (variance2 < 2 * variance1);
   if (almost_equal) {
-    if ((std::abs(mean1[0] - mean2[0]) /
+    // Pooled variance for central moments normalized by n (s^2 denotes the
+    // sample variance normalized by n - 1):
+    //   ((n1 - 1) * s1^2 + (n2 - 1) * s2^2) / (n1 + n2 - 2)
+    //   = (n1 * variance1 + n2 * variance2) / (n1 + n2 - 2)
+    const RealType pooled_variance =
+        (static_cast<RealType>(n1) * variance1 +
+         static_cast<RealType>(n2) * variance2) /
+        static_cast<RealType>(n1 + n2 - 2);
+    if ((std::abs(mean1 - mean2) /
          std::sqrt((static_cast<RealType>(1.0) / static_cast<RealType>(n1) +
-                     static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
-                    ((n1 - 1) * (n1 - 1) * variance1[0] +
-                     (n2 - 1) * (n2 - 1) * variance2[0]) /
-                    (n1 + n2 - 2))) < static_cast<RealType>(threshold)) {
+                    static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
+                   pooled_variance)) < static_cast<RealType>(threshold)) {
       res = 1;
     } else {
       res = 0;
     }
   } else {
-    if ((std::abs(mean1[0] - mean2[0]) /
-         std::sqrt((variance1[0] + variance2[0]))) <
+    // Welch's t-test for central moments normalized by n:
+    //   s1^2 / n1 + s2^2 / n2 = variance1 / (n1 - 1) + variance2 / (n2 - 1)
+    const RealType welch_variance =
+        variance1 / static_cast<RealType>(n1 - 1) +
+        variance2 / static_cast<RealType>(n2 - 1);
+    if ((std::abs(mean1 - mean2) / std::sqrt(welch_variance)) <
         static_cast<RealType>(threshold)) {
       res = 1;
     } else {
       res = 0;
     }
   }
-  // Free allocated memory
-  sycl::free(mean1, q);
-  sycl::free(variance1, q);
-  sycl::free(mean2, q);
-  sycl::free(variance2, q);
   return res;
+}
+
+// Parse a command line argument as a value of type T. The value is updated
+// only if the whole argument is a valid number that fits into T.
+template <typename T>
+bool parse_argument(const char* str, T& value) {
+  std::istringstream stream(str);
+  // Use '.' as decimal separator regardless of the global locale
+  stream.imbue(std::locale::classic());
+  T parsed{};
+  stream >> parsed;
+  if (stream.fail() || !(stream >> std::ws).eof()) {
+    return false;
+  }
+  value = parsed;
+  return true;
 }
 
 int main(int argc, char** argv) {
@@ -127,28 +169,26 @@ int main(int argc, char** argv) {
   std::cout << "-------------------------------------" << std::endl;
 
   using fp_type = float;
-  size_t n_points = n_samples;
+  std::int64_t n_points = n_samples;
   fp_type mean = expected_mean;
   fp_type std_dev = expected_std_dev;
 
+  // Invalid or out-of-range arguments fall back to the default values
   if (argc >= 2) {
-    n_points = std::atol(argv[1]);
-    if (n_points == 0) {
-      n_points = n_samples;
+    std::int64_t value = 0;
+    if (parse_argument(argv[1], value) && value >= 2) {
+      n_points = value;
     }
   }
 
   if (argc >= 3) {
-    mean = std::atof(argv[2]);
-    if (std::isnan(mean) || std::isinf(mean)) {
-      mean = expected_mean;
-    }
+    parse_argument(argv[2], mean);
   }
 
   if (argc >= 4) {
-    std_dev = std::atof(argv[3]);
-    if (std_dev <= static_cast<fp_type>(0.0f)) {
-      std_dev = expected_std_dev;
+    fp_type value = 0;
+    if (parse_argument(argv[3], value) && value > static_cast<fp_type>(0.0f)) {
+      std_dev = value;
     }
   }
 
@@ -172,9 +212,21 @@ int main(int argc, char** argv) {
   try {
     // Queue constructor passed exception handler
     sycl::queue q(sycl::default_selector_v, exception_handler);
-    // Allocate memory for random output
-    fp_type* rng_arr0 = sycl::malloc_shared<fp_type>(n_points, q);
-    fp_type* rng_arr1 = sycl::malloc_shared<fp_type>(n_points, q);
+    // Allocate memory for random output; memory is released automatically,
+    // including when an exception is thrown
+    auto usm_deleter = [&q](fp_type* ptr) { sycl::free(ptr, q); };
+    using usm_ptr = std::unique_ptr<fp_type, decltype(usm_deleter)>;
+    usm_ptr rng_arr0_ptr(
+        sycl::malloc_shared<fp_type>(static_cast<std::size_t>(n_points), q),
+        usm_deleter);
+    usm_ptr rng_arr1_ptr(
+        sycl::malloc_shared<fp_type>(static_cast<std::size_t>(n_points), q),
+        usm_deleter);
+    if (!rng_arr0_ptr || !rng_arr1_ptr) {
+      throw std::runtime_error("Failed to allocate USM memory");
+    }
+    fp_type* rng_arr0 = rng_arr0_ptr.get();
+    fp_type* rng_arr1 = rng_arr1_ptr.get();
     // Create engine object
     oneapi::mkl::rng::default_engine engine(q, seed);
     // Create distribution object
@@ -183,13 +235,15 @@ int main(int argc, char** argv) {
     oneapi::mkl::rng::generate(distribution, engine, n_points, rng_arr0);
     oneapi::mkl::rng::generate(distribution, engine, n_points, rng_arr1);
     q.wait_and_throw();
+    // Create oneDPL device policy once and reuse it for all reductions
+    auto policy = oneapi::dpl::execution::make_device_policy(q);
     // Launch T-test with expected mean
-    res0 = t_test(q, rng_arr0, n_points, mean);
+    res0 = t_test(policy, rng_arr0, n_points, mean);
     // Launch T-test with two input arrays
-    res1 = t_test(q, rng_arr0, n_points, rng_arr1, n_points);
-    // Free allocated memory
-    sycl::free(rng_arr0, q);
-    sycl::free(rng_arr1, q);
+    res1 = t_test(policy, rng_arr0, n_points, rng_arr1, n_points);
+  } catch (const std::exception& e) {
+    std::cout << "Failure: " << e.what() << std::endl;
+    return 1;
   } catch (...) {
     // Some other exception detected
     std::cout << "Failure" << std::endl;
