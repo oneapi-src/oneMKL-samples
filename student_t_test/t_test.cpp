@@ -15,13 +15,14 @@
 #include <oneapi/dpl/execution>
 #include <oneapi/dpl/numeric>
 #include <sycl/sycl.hpp>
-#include <cerrno>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <functional>
 #include <iostream>
+#include <locale>
 #include <memory>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
 
@@ -136,6 +137,22 @@ std::int32_t t_test(Policy& policy, RealType* r1, std::int64_t n1,
   return res;
 }
 
+// Parse a command line argument as a value of type T. The value is updated
+// only if the whole argument is a valid number that fits into T.
+template <typename T>
+bool parse_argument(const char* str, T& value) {
+  std::istringstream stream(str);
+  // Use '.' as decimal separator regardless of the global locale
+  stream.imbue(std::locale::classic());
+  T parsed{};
+  stream >> parsed;
+  if (stream.fail() || !(stream >> std::ws).eof()) {
+    return false;
+  }
+  value = parsed;
+  return true;
+}
+
 int main(int argc, char** argv) {
   std::cout << "Student's T-test Simulation" << std::endl;
   std::cout << "Unified Shared Memory Api" << std::endl;
@@ -148,29 +165,19 @@ int main(int argc, char** argv) {
 
   // Invalid or out-of-range arguments fall back to the default values
   if (argc >= 2) {
-    char* end = nullptr;
-    errno = 0;
-    const long long value = std::strtoll(argv[1], &end, 10);
-    if (end != argv[1] && *end == '\0' && errno == 0 && value >= 2) {
-      n_points = static_cast<std::int64_t>(value);
+    std::int64_t value = 0;
+    if (parse_argument(argv[1], value) && value >= 2) {
+      n_points = value;
     }
   }
 
   if (argc >= 3) {
-    char* end = nullptr;
-    errno = 0;
-    const fp_type value = std::strtof(argv[2], &end);
-    if (end != argv[2] && *end == '\0' && errno == 0 && std::isfinite(value)) {
-      mean = value;
-    }
+    parse_argument(argv[2], mean);
   }
 
   if (argc >= 4) {
-    char* end = nullptr;
-    errno = 0;
-    const fp_type value = std::strtof(argv[3], &end);
-    if (end != argv[3] && *end == '\0' && errno == 0 && std::isfinite(value) &&
-        value > static_cast<fp_type>(0.0f)) {
+    fp_type value = 0;
+    if (parse_argument(argv[3], value) && value > static_cast<fp_type>(0.0f)) {
       std_dev = value;
     }
   }
