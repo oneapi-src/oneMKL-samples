@@ -77,16 +77,19 @@ template <typename Policy, typename RealType>
 std::int32_t t_test(Policy& policy, RealType* r, std::int64_t n,
                     RealType expected_mean) {
   std::int32_t res;
-  RealType sqrt_n_observations = std::sqrt(static_cast<RealType>(n));
 
   // Perform computations of mean and variance
   const auto [mean, variance] = mean_and_central_moment(policy, r, n);
   if (!(variance > static_cast<RealType>(0))) {
     throw std::domain_error("T-test is undefined for zero variance");
   }
-  // Check the condition
-  if ((std::abs(mean - expected_mean) * sqrt_n_observations /
-       std::sqrt(variance)) < static_cast<RealType>(threshold)) {
+  // T statistic for the central moment normalized by n (s^2 denotes the
+  // sample variance normalized by n - 1):
+  //   |mean - expected_mean| * sqrt(n) / s
+  //   = |mean - expected_mean| * sqrt(n - 1) / sqrt(variance)
+  if ((std::abs(mean - expected_mean) *
+       std::sqrt(static_cast<RealType>(n - 1)) / std::sqrt(variance)) <
+      static_cast<RealType>(threshold)) {
     res = 1;
   } else {
     res = 0;
@@ -110,24 +113,31 @@ std::int32_t t_test(Policy& policy, RealType* r1, std::int64_t n1,
   }
   // Check the condition
   bool almost_equal =
-      (variance1 < 2 * variance2) || (variance2 < 2 * variance1);
+      (variance1 < 2 * variance2) && (variance2 < 2 * variance1);
   if (almost_equal) {
+    // Pooled variance for central moments normalized by n (s^2 denotes the
+    // sample variance normalized by n - 1):
+    //   ((n1 - 1) * s1^2 + (n2 - 1) * s2^2) / (n1 + n2 - 2)
+    //   = (n1 * variance1 + n2 * variance2) / (n1 + n2 - 2)
+    const RealType pooled_variance =
+        (static_cast<RealType>(n1) * variance1 +
+         static_cast<RealType>(n2) * variance2) /
+        static_cast<RealType>(n1 + n2 - 2);
     if ((std::abs(mean1 - mean2) /
          std::sqrt((static_cast<RealType>(1.0) / static_cast<RealType>(n1) +
-                     static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
-                    (static_cast<RealType>(n1 - 1) *
-                         static_cast<RealType>(n1 - 1) * variance1 +
-                     static_cast<RealType>(n2 - 1) *
-                         static_cast<RealType>(n2 - 1) * variance2) /
-                    static_cast<RealType>(n1 + n2 - 2))) <
-        static_cast<RealType>(threshold)) {
+                    static_cast<RealType>(1.0) / static_cast<RealType>(n2)) *
+                   pooled_variance)) < static_cast<RealType>(threshold)) {
       res = 1;
     } else {
       res = 0;
     }
   } else {
-    if ((std::abs(mean1 - mean2) /
-         std::sqrt((variance1 + variance2))) <
+    // Welch's t-test for central moments normalized by n:
+    //   s1^2 / n1 + s2^2 / n2 = variance1 / (n1 - 1) + variance2 / (n2 - 1)
+    const RealType welch_variance =
+        variance1 / static_cast<RealType>(n1 - 1) +
+        variance2 / static_cast<RealType>(n2 - 1);
+    if ((std::abs(mean1 - mean2) / std::sqrt(welch_variance)) <
         static_cast<RealType>(threshold)) {
       res = 1;
     } else {
